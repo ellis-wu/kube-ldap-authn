@@ -27,7 +27,7 @@ spec:
       hostNetwork: true
       containers:
       - name: kube-ldap-authn
-        image: docker.io/torchbox/kube-ldap-authn:latest
+        image: elliswu/kube-ldap-authn:nfu
         imagePullPolicy: Always
         env:
         - name: KUBE_LDAP_AUTHN_SETTINGS
