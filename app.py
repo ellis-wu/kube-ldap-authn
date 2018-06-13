@@ -8,7 +8,7 @@
 # warranty.
 
 from flask import Flask, request, jsonify, Response
-import ldap, ldap.filter, logging, sys
+import ldap, ldap.filter, logging, sys, base64
 
 logger = logging.getLogger('kube-ldap-authn')
 logger.setLevel(logging.INFO)
@@ -67,6 +67,7 @@ def authn():
         return auth_error
 
     ld.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
+    ld.set_option(ldap.OPT_REFERRALS, 0)
 
     if app.config.get('LDAP_START_TLS', True) == True:
         try:
@@ -82,15 +83,16 @@ def authn():
         logger.info("LDAP bind error: " + str(e))
         return auth_error
 
-    user_search = app.config['LDAP_USER_SEARCH_FILTER'].format(
-                    token=ldap.filter.escape_filter_chars(token))
+    t = base64.b64decode(token).decode('utf-8')
+    user_search = app.config['LDAP_USER_SEARCH_FILTER'].format(*t.split('-'))
 
     try:
-        r = ld.search_s(app.config['LDAP_USER_SEARCH_BASE'],
+        users = ld.search_s(app.config['LDAP_USER_SEARCH_BASE'],
                         ldap.SCOPE_SUBTREE,
                         user_search,
                         [ app.config['LDAP_USER_NAME_ATTRIBUTE'],
                           app.config['LDAP_USER_UID_ATTRIBUTE'] ])
+        r = [ i for i in users if i[0] is not None]
     except ldap.LDAPError as e:
         logger.info("LDAP user search error: " + str(e))
         return auth_error
@@ -114,8 +116,8 @@ def authn():
         return auth_error
 
     groups = [
-            i[1][app.config['LDAP_GROUP_NAME_ATTRIBUTE']][0].decode('ascii')
-        for i in g ]
+            i[1][LDAP_GROUP_NAME_ATTRIBUTE][0].decode('ascii')
+        for i in g if i[0] is not None ]
 
     return jsonify({
         'apiVersion': 'authentication.k8s.io/v1beta1',
