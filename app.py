@@ -116,7 +116,7 @@ def authn():
         return auth_error
 
     groups = [
-            i[1][LDAP_GROUP_NAME_ATTRIBUTE][0].decode('ascii')
+            i[1][app.config['LDAP_GROUP_NAME_ATTRIBUTE']][0].decode('ascii')
         for i in g if i[0] is not None ]
 
     return jsonify({
